@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login Perpustakaan</title>
+<style>
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  font-family:Segoe UI;
+}
+.card{
+  background:rgba(255,255,255,.15);
+  backdrop-filter:blur(10px);
+  padding:30px;
+  width:320px;
+  border-radius:15px;
+  color:white;
+  box-shadow:0 20px 40px rgba(0,0,0,.3);
+  text-align:center;
+}
+button{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border:none;
+  border-radius:8px;
+  font-size:15px;
+  cursor:pointer;
+}
+.admin{background:#1abc9c}
+.petugas{background:#3498db}
+.anggota{background:#f39c12}
+button:hover{opacity:.85}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>📚 Sistem Perpustakaan</h2>
+  <p>Pilih Role</p>
+  <button class="admin" onclick="login('admin')">👑 Admin</button>
+  <button class="petugas" onclick="login('petugas')">🧑‍💼 Petugas</button>
+  <button class="anggota" onclick="login('anggota')">🎓 Anggota</button>
+</div>
+
+<script>
+function login(role){
+  localStorage.setItem('role',role);
+  location.href=`/${role}.html`;
+}
+</script>
+</body>
+</html>

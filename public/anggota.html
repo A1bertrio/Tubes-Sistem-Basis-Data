@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Anggota Dashboard</title>
+<style>
+body{margin:0;font-family:Segoe UI;background:#fff7ec}
+.header{
+  background:#f39c12;color:white;padding:20px;
+  display:flex;justify-content:space-between
+}
+.card{
+  margin:30px;background:white;padding:20px;
+  border-radius:10px;box-shadow:0 5px 20px rgba(0,0,0,.1)
+}
+.loading{display:none}
+.spinner{
+  width:20px;height:20px;border:3px solid #ccc;
+  border-top:3px solid #f39c12;border-radius:50%;
+  animation:spin 1s linear infinite
+}
+@keyframes spin{100%{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>🎓 Anggota</h2>
+  <button onclick="logout()">🔁 Ganti User</button>
+</div>
+
+<div class="card">
+  <h3>📚 Daftar Buku</h3>
+  <button onclick="load()">Tampilkan Buku</button>
+  <div id="loading" class="loading">
+    <span class="spinner"></span> Memuat...
+  </div>
+  <ul id="list"></ul>
+</div>
+
+<script>
+if(localStorage.getItem('role')!=='anggota')location.href='/login.html';
+function logout(){localStorage.clear();location.href='/login.html';}
+async function load(){
+  loading.style.display='block';
+  const res=await fetch('/buku/all',{
+    headers:{'x-role':'anggota'}
+  });
+  const data=await res.json();
+  list.innerHTML='';
+  data.forEach(b=>{
+    list.innerHTML+=`<li>${b.judul}</li>`;
+  });
+  loading.style.display='none';
+}
+</script>
+</body>
+</html>
