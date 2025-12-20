@@ -1,25 +1,69 @@
+<!-- public/anggota.html -->
 <!DOCTYPE html>
 <html>
 <head>
-<title>Anggota Dashboard</title>
-<style>
-body{margin:0;font-family:Segoe UI;background:#fff7ec}
-.header{
-  background:#f39c12;color:white;padding:20px;
-  display:flex;justify-content:space-between
-}
-.card{
-  margin:30px;background:white;padding:20px;
-  border-radius:10px;box-shadow:0 5px 20px rgba(0,0,0,.1)
-}
-.loading{display:none}
-.spinner{
-  width:20px;height:20px;border:3px solid #ccc;
-  border-top:3px solid #f39c12;border-radius:50%;
-  animation:spin 1s linear infinite
-}
-@keyframes spin{100%{transform:rotate(360deg)}}
-</style>
+  <title>Anggota Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Segoe UI;
+      background: #fff7ec;
+    }
+    .header {
+      background: #f39c12;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card {
+      margin: 30px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.1);
+    }
+    .loading {
+      display: none;
+      margin: 15px 0;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ccc;
+      border-top: 3px solid #f39c12;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    li:last-child {
+      border-bottom: none;
+    }
+    button {
+      padding: 10px 16px;
+      background: #f39c12;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+  </style>
 </head>
 <body>
 
@@ -29,29 +73,61 @@ body{margin:0;font-family:Segoe UI;background:#fff7ec}
 </div>
 
 <div class="card">
-  <h3>📚 Daftar Buku</h3>
+  <h3>📚 Daftar Buku (Semua Data Dimuat)</h3>
   <button onclick="load()">Tampilkan Buku</button>
+
   <div id="loading" class="loading">
-    <span class="spinner"></span> Memuat...
+    <span class="spinner"></span> Memuat semua buku...
   </div>
+
   <ul id="list"></ul>
 </div>
 
 <script>
-if(localStorage.getItem('role')!=='anggota')location.href='/login.html';
-function logout(){localStorage.clear();location.href='/login.html';}
-async function load(){
-  loading.style.display='block';
-  const res=await fetch('/buku/all',{
-    headers:{'x-role':'anggota'}
-  });
-  const data=await res.json();
-  list.innerHTML='';
-  data.forEach(b=>{
-    list.innerHTML+=`<li>${b.judul}</li>`;
-  });
-  loading.style.display='none';
-}
+  if (localStorage.getItem('role') !== 'anggota') {
+    location.href = '/login.html';
+  }
+
+  function logout() {
+    localStorage.clear();
+    location.href = '/login.html';
+  }
+
+  async function load() {
+    const loading = document.getElementById('loading');
+    const list = document.getElementById('list');
+    
+    loading.style.display = 'block';
+    list.innerHTML = '';
+
+    try {
+      const res = await fetch('/buku/all', {
+        headers: { 'x-role': 'anggota' }
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+
+      if (data.length === 0) {
+        list.innerHTML = '<li>Tidak ada buku tersedia.</li>';
+      } else {
+        data.forEach(b => {
+          const tahun = b.tahun ? `(${b.tahun})` : '';
+          list.innerHTML += `
+            <li>
+              <strong>${b.judul}</strong><br>
+              <small>Oleh: ${b.pengarang || '–'} • ISBN: ${b.isbn || '–'} ${tahun}</small>
+            </li>`;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      list.innerHTML = '<li style="color:red;">Gagal memuat daftar buku.</li>';
+    }
+
+    loading.style.display = 'none';
+  }
 </script>
 </body>
 </html>

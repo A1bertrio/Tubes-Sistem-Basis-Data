@@ -1,31 +1,46 @@
+<!-- public/admin.html -->
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Dashboard</title>
-<style>
-body{margin:0;font-family:Segoe UI;background:#f4f6fb}
-.sidebar{
-  position:fixed;left:0;top:0;width:220px;height:100%;
-  background:#2c3e50;color:white;padding:20px
-}
-.main{margin-left:240px;padding:25px}
-.card{
-  background:white;padding:20px;border-radius:10px;
-  box-shadow:0 5px 20px rgba(0,0,0,.1)
-}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #ddd}
-th{background:#1abc9c;color:white}
-.loading{display:none;margin:10px 0}
-.spinner{
-  width:20px;height:20px;border:3px solid #ccc;
-  border-top:3px solid #1abc9c;border-radius:50%;
-  animation:spin 1s linear infinite;display:inline-block
-}
-@keyframes spin{100%{transform:rotate(360deg)}}
-button{padding:8px 12px;border:none;border-radius:6px;cursor:pointer}
-.logout{background:#e74c3c;color:white;width:100%}
-</style>
+  <title>Admin Dashboard</title>
+  <style>
+    body { margin: 0; font-family: Segoe UI; background: #f4f6fb; }
+    .sidebar {
+      position: fixed; left: 0; top: 0; width: 220px; height: 100%;
+      background: #2c3e50; color: white; padding: 20px;
+    }
+    .main { margin-left: 240px; padding: 25px; }
+    .card {
+      background: white; padding: 20px; border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.1);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+    th { background: #1abc9c; color: white; }
+    .loading { display: none; margin: 15px 0; }
+    .spinner {
+      width: 20px; height: 20px; border: 3px solid #ccc;
+      border-top: 3px solid #1abc9c; border-radius: 50%;
+      animation: spin 1s linear infinite; display: inline-block;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .pagination {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    button {
+      padding: 8px 12px; border: none; border-radius: 6px;
+      cursor: pointer; background: #1abc9c; color: white;
+    }
+    button:disabled {
+      background: #bdc3c7; cursor: not-allowed;
+    }
+    .logout {
+      background: #e74c3c; width: 100%; margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
 
@@ -39,47 +54,103 @@ button{padding:8px 12px;border:none;border-radius:6px;cursor:pointer}
   <div class="card">
     <h3>📋 Data Anggota</h3>
 
-    <select id="limit">
-      <option value="100">100</option>
-      <option value="500">500</option>
-      <option value="1000">1000</option>
-    </select>
-    <button onclick="load()">Tampilkan</button>
-
     <div class="loading" id="loading">
       <span class="spinner"></span> Memuat data...
     </div>
 
     <table>
       <thead>
-        <tr><th>NIM</th><th>Nama</th><th>Email</th><th>No HP</th><th>Alamat</th></tr>
+        <tr>
+          <th>NIM</th>
+          <th>Nama</th>
+          <th>Email</th>
+          <th>No HP</th>
+          <th>Alamat</th>
+        </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
+
+    <div class="pagination">
+      <button id="prev" onclick="prevPage()" disabled>← Sebelumnya</button>
+      <span id="pageInfo">Memuat...</span>
+      <button id="next" onclick="nextPage()" disabled>Berikutnya →</button>
+    </div>
   </div>
 </div>
 
 <script>
-if(localStorage.getItem('role')!=='admin')location.href='/login.html';
+  if (localStorage.getItem('role') !== 'admin') {
+    location.href = '/login.html';
+  }
 
-function logout(){
-  localStorage.clear();location.href='/login.html';
-}
-async function load(){
-  loading.style.display='block';
-  const limit=limit.value;
-  const res=await fetch(`/admin/anggota?limit=${limit}`,{
-    headers:{'x-role':'admin'}
-  });
-  const json=await res.json();
-  tbody.innerHTML='';
-  json.data.forEach(a=>{
-    tbody.innerHTML+=`
-      <tr><td>${a.nim}</td><td>${a.nama}</td>
-      <td>${a.email}</td><td>${a.no_hp}</td><td>${a.alamat}</td></tr>`;
-  });
-  loading.style.display='none';
-}
+  let currentPage = 1;
+  const tbody = document.getElementById('tbody');
+  const loading = document.getElementById('loading');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+
+  async function load(page = 1) {
+    loading.style.display = 'block';
+    tbody.innerHTML = '';
+
+    try {
+      const res = await fetch(`/admin/anggota?page=${page}`, {
+        headers: { 'x-role': 'admin' }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const result = await res.json();
+
+      if (result.data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#777">Tidak ada data</td></tr>`;
+      } else {
+        result.data.forEach(a => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${a.nim || ''}</td>
+              <td>${a.nama || ''}</td>
+              <td>${a.email || ''}</td>
+              <td>${a.no_hp || ''}</td>
+              <td>${a.alamat || ''}</td>
+            </tr>`;
+        });
+      }
+
+      // Update pagination UI
+      const { currentPage: current, totalPages } = result.pagination;
+      pageInfo.textContent = `Halaman ${current} dari ${totalPages}`;
+      prevBtn.disabled = current <= 1;
+      nextBtn.disabled = current >= totalPages;
+      currentPage = current;
+
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red">Gagal memuat data</td></tr>`;
+    }
+
+    loading.style.display = 'none';
+  }
+
+  function prevPage() {
+    if (currentPage > 1) load(currentPage - 1);
+  }
+
+  function nextPage() {
+    load(currentPage + 1);
+  }
+
+  // Muat halaman pertama saat halaman dibuka
+  load();
+  
+  function logout() {
+    localStorage.clear();
+    location.href = '/login.html';
+  }
 </script>
 </body>
 </html>
