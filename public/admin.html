@@ -1,4 +1,3 @@
-<!-- public/admin.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,13 +9,13 @@
       background: #2c3e50; color: white; padding: 20px;
     }
     .main { margin-left: 240px; padding: 25px; }
-    .card {
-      background: white; padding: 20px; border-radius: 10px;
-      box-shadow: 0 5px 20px rgba(0,0,0,.1);
-    }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
-    th { background: #1abc9c; color: white; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+    th { background: #1abc9c; color: white; cursor: pointer; user-select: none; position: relative; }
+    th::after { content: '↕'; position: absolute; right: 8px; opacity: 0.4; }
+    th.asc::after { content: '↑'; opacity: 1; }
+    th.desc::after { content: '↓'; opacity: 1; }
     .loading { display: none; margin: 15px 0; }
     .spinner {
       width: 20px; height: 20px; border: 3px solid #ccc;
@@ -24,6 +23,8 @@
       animation: spin 1s linear infinite; display: inline-block;
     }
     @keyframes spin { 100% { transform: rotate(360deg); } }
+    .controls { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    #searchInput { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px; }
     .pagination {
       margin-top: 20px;
       display: flex;
@@ -37,9 +38,8 @@
     button:disabled {
       background: #bdc3c7; cursor: not-allowed;
     }
-    .logout {
-      background: #e74c3c; width: 100%; margin-top: 20px;
-    }
+    .logout { background: #e74c3c; width: 100%; margin-top: 20px; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; }
   </style>
 </head>
 <body>
@@ -54,60 +54,109 @@
   <div class="card">
     <h3>📋 Data Anggota</h3>
 
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="Cari NIM, nama, email, alamat..." />
+    </div>
+
     <div class="loading" id="loading">
       <span class="spinner"></span> Memuat data...
     </div>
 
-    <table>
+    <table id="dataTable">
       <thead>
         <tr>
-          <th>NIM</th>
-          <th>Nama</th>
-          <th>Email</th>
-          <th>No HP</th>
-          <th>Alamat</th>
+          <th data-field="nim">NIM</th>
+          <th data-field="nama">Nama</th>
+          <th data-field="email">Email</th>
+          <th data-field="no_hp">No HP</th>
+          <th data-field="alamat">Alamat</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
 
-    <div class="pagination">
+    <div class="pagination" id="paginationSection" style="display:none;">
       <button id="prev" onclick="prevPage()" disabled>← Sebelumnya</button>
-      <span id="pageInfo">Memuat...</span>
+      <span id="pageInfo">Halaman 1</span>
       <button id="next" onclick="nextPage()" disabled>Berikutnya →</button>
     </div>
   </div>
 </div>
 
 <script>
-  if (localStorage.getItem('role') !== 'admin') {
-    location.href = '/login.html';
-  }
+  // State manajemen
+  const state = {
+    page: 1,
+    search: '',
+    sortBy: 'nim',
+    order: 'asc'
+  };
 
-  let currentPage = 1;
+  // Ambil elemen
+  const searchInput = document.getElementById('searchInput');
   const tbody = document.getElementById('tbody');
   const loading = document.getElementById('loading');
-  const pageInfo = document.getElementById('pageInfo');
-  const prevBtn = document.getElementById('prev');
-  const nextBtn = document.getElementById('next');
+  const dataTable = document.getElementById('dataTable');
+  const paginationSection = document.getElementById('paginationSection');
 
-  async function load(page = 1) {
+  // Setup event listener
+  searchInput.addEventListener('input', (e) => {
+    state.search = e.target.value;
+    state.page = 1;
+    load();
+  });
+
+  document.querySelectorAll('th[data-field]').forEach(th => {
+    th.addEventListener('click', () => {
+      const field = th.dataset.field;
+      if (state.sortBy === field) {
+        state.order = state.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortBy = field;
+        state.order = 'asc';
+      }
+      state.page = 1;
+      load();
+    });
+  });
+
+  async function load() {
+    const role = localStorage.getItem('role');
+    if (!role) {
+      showErrorMessage('Anda belum login. Silakan login terlebih dahulu.');
+      return;
+    }
+
     loading.style.display = 'block';
     tbody.innerHTML = '';
+    paginationSection.style.display = 'none';
 
     try {
-      const res = await fetch(`/admin/anggota?page=${page}`, {
-        headers: { 'x-role': 'admin' }
+      const params = new URLSearchParams({
+        page: state.page,
+        search: state.search,
+        sortBy: state.sortBy,
+        order: state.order
       });
 
+      const res = await fetch(`/admin/anggota?${params}`, {
+        headers: { 'x-role': role } // Kirim role sesuai localStorage
+      });
+
+      if (res.status === 403) {
+        showErrorMessage('❌ Akses ditolak (Error 403 Forbidden). Anda tidak memiliki izin sebagai Admin.');
+        return;
+      }
+
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error(`Server error: ${res.status}`);
       }
 
       const result = await res.json();
 
+      // Render data
       if (result.data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#777">Tidak ada data</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#777">Tidak ada data ditemukan</td></tr>`;
       } else {
         result.data.forEach(a => {
           tbody.innerHTML += `
@@ -121,36 +170,55 @@
         });
       }
 
-      // Update pagination UI
-      const { currentPage: current, totalPages } = result.pagination;
-      pageInfo.textContent = `Halaman ${current} dari ${totalPages}`;
-      prevBtn.disabled = current <= 1;
-      nextBtn.disabled = current >= totalPages;
-      currentPage = current;
+      // Tampilkan navigasi pagination
+      const { currentPage, totalPages } = result.pagination;
+      document.getElementById('pageInfo').textContent = `Halaman ${currentPage} dari ${totalPages}`;
+      document.getElementById('prev').disabled = currentPage <= 1;
+      document.getElementById('next').disabled = currentPage >= totalPages;
+      paginationSection.style.display = 'flex';
+
+      // Update visual sort
+      document.querySelectorAll('th[data-field]').forEach(th => {
+        th.classList.remove('asc', 'desc');
+        if (th.dataset.field === state.sortBy) {
+          th.classList.add(state.order);
+        }
+      });
 
     } catch (err) {
       console.error(err);
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red">Gagal memuat data</td></tr>`;
+      showErrorMessage('Gagal memuat data dari server.');
     }
 
     loading.style.display = 'none';
   }
 
+  function showErrorMessage(message) {
+    tbody.innerHTML = `<tr><td colspan="5" class="error">${message}</td></tr>`;
+    paginationSection.style.display = 'none';
+    loading.style.display = 'none';
+  }
+
   function prevPage() {
-    if (currentPage > 1) load(currentPage - 1);
+    if (state.page > 1) {
+      state.page--;
+      load();
+    }
   }
 
   function nextPage() {
-    load(currentPage + 1);
+    state.page++;
+    load();
   }
 
-  // Muat halaman pertama saat halaman dibuka
-  load();
-  
   function logout() {
     localStorage.clear();
+    alert('Anda telah logout.');
     location.href = '/login.html';
   }
+
+  // Muat data saat halaman dibuka — SIAPA PUN BISA BUKA HALAMAN INI
+  load();
 </script>
 </body>
 </html>
