@@ -1,0 +1,48 @@
+<!-- public/admin-nonpaginated.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin (Non-Pagination)</title>
+  <style>
+    body { font-family: Segoe UI; margin: 0; background: #ffebee; }
+    .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .btn { padding: 12px 24px; background: #e91e63; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .stats { margin-top: 15px; padding: 12px; background: #fff3e0; font-family: monospace; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>⚠️ Admin: Non-Pagination (Load Semua Data)</h2>
+  <button class="btn" onclick="loadAll()">Muat Semua Data (1 juta+ baris)</button>
+  <div class="stats" id="stats"></div>
+</div>
+
+<script>
+async function loadAll() {
+  const role = localStorage.getItem('role');
+  const stats = document.getElementById('stats');
+  stats.innerHTML = 'Memuat data...';
+
+  const start = Date.now();
+  try {
+    const res = await fetch('/admin/nonpaginated', {
+      headers: { 'x-role': role }
+    });
+    if (!res.ok) throw new Error('Gagal');
+    
+    const result = await res.json();
+    const elapsed = Date.now() - start;
+    
+    stats.innerHTML = `
+      ✅ Berhasil!<br>
+      - Total data: ${result.total.toLocaleString()}<br>
+      - Waktu: ${elapsed} ms<br>
+      - Ukuran payload: ${Math.round(result.data.length * 1.5)} KB (perkiraan)
+    `;
+  } catch (err) {
+    stats.innerHTML = '❌ Gagal: ' + err.message;
+  }
+}
+</script>
+</body>
+</html>

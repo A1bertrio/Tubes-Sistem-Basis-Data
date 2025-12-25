@@ -1,3 +1,4 @@
+<!-- public/login.html (versi lengkap) -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -34,11 +35,9 @@ button{
 .admin{background:#1abc9c}
 .petugas{background:#3498db}
 .anggota{background:#f39c12}
-button:hover{opacity:.85}
 </style>
 </head>
 <body>
-
 <div class="card">
   <h2>📚 Sistem Perpustakaan</h2>
   <p>Pilih Role</p>
@@ -46,11 +45,16 @@ button:hover{opacity:.85}
   <button class="petugas" onclick="login('petugas')">🧑‍💼 Petugas</button>
   <button class="anggota" onclick="login('anggota')">🎓 Anggota</button>
 </div>
-
 <script>
 function login(role){
   localStorage.setItem('role',role);
-  location.href=`/${role}.html`;
+  if (role === 'admin') {
+    location.href = '/admin-paginated.html';
+  } else if (role === 'petugas') {
+    location.href = '/petugas.html';
+  } else if (role === 'anggota') {
+    location.href = '/anggota.html';
+  }
 }
 </script>
 </body>

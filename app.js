@@ -1,13 +1,16 @@
+// app.js (updated)
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use('/admin', require('./routes/admin'));
+// Semua route
+app.use('/admin', require('./routes/admin-paginated'));
+app.use('/admin', require('./routes/admin-nonpaginated'));
 app.use('/buku', require('./routes/buku'));
 app.use('/peminjaman', require('./routes/peminjaman'));
 
